@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage 1: Your First Triangle</title>
+<style>
+  :root {
+    --bg: #fafaf8; --fg: #1d1d1b; --muted: #66665f; --card: #ffffff; --border: #dcdcd4;
+    --code-bg: #f1f1ec; --accent: #2f6fdb; --warn-bg: #fff4dc; --warn-border: #e3b341;
+    --note-bg: #eaf2ff; --note-border: #9bbcf2; --ok: #2a8a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151618; --fg: #e8e8e3; --muted: #9a9a92; --card: #1d1f22; --border: #34373b;
+      --code-bg: #101113; --accent: #6ea0ff; --warn-bg: #2d2610; --warn-border: #8a6d1c;
+      --note-bg: #14233d; --note-border: #2f4f85; --ok: #5fcf85;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 96px; }
+  h1 { font-size: 2rem; margin: 0 0 8px; }
+  h2 { font-size: 1.45rem; margin: 48px 0 8px; padding-top: 24px; border-top: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; margin: 28px 0 4px; }
+  p, li { margin: 8px 0; }
+  code, pre { font: 0.88em/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; overflow-x: auto; margin: 12px 0;
+  }
+  pre code { background: none; padding: 0; }
+  .goal { font-size: 1.1rem; color: var(--muted); margin-bottom: 24px; }
+  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .meta { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 18px 12px; }
+  .card h3 { margin-top: 8px; }
+  .card ul { padding-left: 20px; margin: 4px 0; }
+  .callout { border-left: 4px solid var(--note-border); background: var(--note-bg); padding: 8px 16px; border-radius: 6px; margin: 16px 0; }
+  .callout.warn { border-color: var(--warn-border); background: var(--warn-bg); }
+  .checkpoint {
+    border: 1px solid var(--ok); border-radius: 8px; padding: 8px 14px; margin: 16px 0;
+  }
+  .checkpoint strong:first-child { color: var(--ok); }
+  details { border: 1px solid var(--border); border-radius: 8px; margin: 12px 0; background: var(--card); }
+  summary { cursor: pointer; padding: 8px 14px; font-weight: 600; color: var(--accent); }
+  details > :not(summary) { margin-left: 14px; margin-right: 14px; }
+  details > pre { margin-bottom: 14px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.95rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+  .recap li { list-style: none; margin-left: -20px; }
+  nav.toc { margin: 24px 0; font-size: 0.95rem; }
+  nav.toc a { color: var(--accent); text-decoration: none; margin-right: 14px; white-space: nowrap; }
+  .demo { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin: 20px 0; }
+  .demo .stage {
+    resize: both; overflow: hidden; width: 100%; max-width: 100%; min-width: 160px;
+    height: 280px; min-height: 120px; border: 1px solid var(--border); border-radius: 6px; background: #000;
+  }
+  .demo canvas { width: 100%; height: 100%; display: block; }
+  .demo .opts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 10px 0 4px; font-size: 0.92rem; }
+  .demo label { cursor: pointer; }
+  #demo-status { color: var(--muted); font-size: 0.88rem; min-height: 1.4em; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Stage 1: Your First Triangle</h1>
+<p class="goal"><strong>Goal:</strong> draw a colored triangle on top of your clear color, without any vertex buffers.</p>
+
+<div class="meta">
+  <div class="card">
+    <h3>You'll learn</h3>
+    <ul>
+      <li>What a render pipeline is and why wgpu makes you build one up front</li>
+      <li>How to write a WGSL vertex and fragment shader</li>
+      <li>How Odin's <code>#load</code> embeds a shader file into your binary</li>
+      <li>How a draw call fits into the render pass you already have</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>You'll touch</h3>
+    <ul>
+      <li><code>shaders/triangle.wgsl</code> (new)</li>
+      <li><code>pipeline.odin</code> (new)</li>
+      <li><code>wgpu_init.odin</code> (add a field to <code>Gpu_State</code>, clean up in <code>wgpu_shutdown</code>)</li>
+      <li><code>main.odin</code> (create the pipeline, issue the draw)</li>
+    </ul>
+  </div>
+</div>
+
+<p>Each step explains the idea, tells you what to write, and ends with a <strong>checkpoint</strong>.
+Solutions are hidden in collapsible <strong>Spoiler</strong> blocks. Try each step yourself first.</p>
+
+<nav class="toc">
+  <a href="#background">Background</a>
+  <a href="#step1">1. Shader</a>
+  <a href="#step2">2. ShaderModule</a>
+  <a href="#step3">3. Pipeline</a>
+  <a href="#step4">4. Gpu_State</a>
+  <a href="#step5">5. Draw</a>
+  <a href="#playground">Playground</a>
+  <a href="#troubleshooting">Troubleshooting</a>
+  <a href="#exercises">Exercises</a>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="background">Background: the mental model</h2>
+
+<p>In OpenGL you set state (<code>glEnable</code>, <code>glBlendFunc</code>, <code>glUseProgram</code>, ...) right before each
+draw. wgpu (like Vulkan, Metal and D3D12) <strong>bakes almost all of that state into one immutable
+object, the <code>RenderPipeline</code></strong>, created once at startup:</p>
+
+<pre><code>RenderPipeline
+├── vertex stage      → shader module + entry point + vertex buffer layouts
+├── primitive state   → triangles? lines? culling? winding order?
+├── depth/stencil     → (Stage 4)
+├── multisample state → MSAA sample count
+├── fragment stage    → shader module + entry point + color target formats/blending
+└── layout            → which bind groups (uniforms/textures) the shaders expect (Stage 3)</code></pre>
+
+<p>At draw time you only say "use this pipeline" and "draw N vertices". The driver can validate
+and compile everything ahead of time, so draws are cheap. The cost is that <strong>changing any of
+this state means a different pipeline.</strong> Later you'll have one pipeline for opaque blocks, one
+for water, one for the block outline, and so on.</p>
+
+<p>Each frame looks like this:</p>
+
+<pre><code>SurfaceGetCurrentTexture → CommandEncoder → BeginRenderPass
+    → SetPipeline → Draw          ← new this stage
+→ End → Finish → QueueSubmit → Present</code></pre>
+
+<p>You already have everything except the middle line.</p>
+
+<!-- ============================================================ -->
+<h2 id="step1">Step 1: Write the shader</h2>
+<p>Create <code>shaders/triangle.wgsl</code>.</p>
+
+<h3>Concepts</h3>
+
+<p><strong>WGSL</strong> is WebGPU's shading language. Its syntax is Rust-flavored:</p>
+
+<pre><code>fn add(a: f32, b: f32) -&gt; f32 { return a + b; }
+var x: f32 = 1.0;          // mutable
+let y = vec3&lt;f32&gt;(1.0);    // immutable; vec3f is shorthand for vec3&lt;f32&gt;</code></pre>
+
+<p>A shader module can hold several <strong>entry points</strong>, each marked with a stage attribute:</p>
+<ul>
+  <li><code>@vertex fn vs_main(...)</code> runs once per vertex. It <strong>must</strong> output a clip-space position
+    marked <code>@builtin(position)</code>.</li>
+  <li><code>@fragment fn fs_main(...)</code> runs once per covered pixel. It outputs a color to
+    <code>@location(0)</code>, the first color attachment of the render pass.</li>
+</ul>
+
+<p><strong>Passing data from vertex to fragment.</strong> Make a struct where one field is
+<code>@builtin(position)</code> and the rest are <code>@location(n)</code> values. The GPU <strong>interpolates</strong> the
+<code>@location</code> values across the triangle. Give each corner a different color and you get the
+classic rainbow gradient for free.</p>
+
+<p><strong>No vertex buffer?</strong> The built-in <code>@builtin(vertex_index) idx: u32</code> input tells you which
+vertex (0, 1, 2, ...) you're on. You can index into a constant array declared inside the shader:</p>
+
+<pre><code>var positions = array&lt;vec2f, 3&gt;(vec2f(...), vec2f(...), vec2f(...));
+let p = positions[idx];</code></pre>
+
+<p>(Use <code>var</code>, not <code>let</code>, for the array. WGSL only allows dynamic indexing into a <code>var</code>.)</p>
+
+<p><strong>Clip space.</strong> The position you output is a <code>vec4f(x, y, z, w)</code>. After dividing by <code>w</code>:</p>
+<ul>
+  <li>x: -1 (left) to +1 (right)</li>
+  <li>y: -1 (bottom) to +1 (top), so <strong>y points up</strong></li>
+  <li>z: <strong>0 (near) to 1 (far)</strong>. This differs from OpenGL's -1..1 and will matter in Stage 3.</li>
+</ul>
+<p>For now use <code>z = 0.0</code> and <code>w = 1.0</code>.</p>
+
+<h3>Your task</h3>
+<p>Write a shader with:</p>
+<ol>
+  <li>A <code>VertexOutput</code> struct with a <code>@builtin(position)</code> field and a <code>@location(0)</code> color field</li>
+  <li><code>vs_main</code> that picks a position and color from two constant arrays using <code>vertex_index</code></li>
+  <li><code>fs_main</code> that takes <code>VertexOutput</code> and returns the interpolated color as a <code>vec4f</code> at <code>@location(0)</code></li>
+</ol>
+<p>Choose triangle corners that are <strong>counter-clockwise</strong> when viewed on screen, e.g. bottom-left,
+bottom-right, top. You'll see why in Step 3.</p>
+
+<details>
+<summary>Hint: function signatures</summary>
+<pre><code>@vertex
+fn vs_main(@builtin(vertex_index) idx: u32) -&gt; VertexOutput { ... }
+
+@fragment
+fn fs_main(in: VertexOutput) -&gt; @location(0) vec4f { ... }</code></pre>
+</details>
+
+<details>
+<summary>Spoiler: full shader</summary>
+<pre><code>struct VertexOutput {
+    @builtin(position) clip_position: vec4f,
+    @location(0) color: vec3f,
+}
+
+@vertex
+fn vs_main(@builtin(vertex_index) idx: u32) -&gt; VertexOutput {
+    var positions = array&lt;vec2f, 3&gt;(
+        vec2f(-0.5, -0.5), // bottom-left
+        vec2f( 0.5, -0.5), // bottom-right
+        vec2f( 0.0,  0.5), // top
+    );
+    var colors = array&lt;vec3f, 3&gt;(
+        vec3f(1.0, 0.0, 0.0),
+        vec3f(0.0, 1.0, 0.0),
+        vec3f(0.0, 0.0, 1.0),
+    );
+
+    var out: VertexOutput;
+    out.clip_position = vec4f(positions[idx], 0.0, 1.0);
+    out.color = colors[idx];
+    return out;
+}
+
+@fragment
+fn fs_main(in: VertexOutput) -&gt; @location(0) vec4f {
+    return vec4f(in.color, 1.0);
+}</code></pre>
+</details>
+
+<div class="checkpoint"><strong>Checkpoint:</strong> nothing to run yet. Errors in this file will show up as wgpu validation
+errors in Step 3.</div>
+
+<!-- ============================================================ -->
+<h2 id="step2">Step 2: Load the shader into a <code>ShaderModule</code></h2>
+<p>Create <code>pipeline.odin</code> (<code>package main</code>).</p>
+
+<h3>Concepts</h3>
+
+<p><strong><code>#load</code></strong> is an Odin compile-time directive. It reads a file and embeds its contents in the
+binary:</p>
+
+<pre><code>SHADER_SRC :: #load("shaders/triangle.wgsl", string)</code></pre>
+
+<p>The path is relative to the <code>.odin</code> file that contains the directive. Because the shader is
+baked in, the binary doesn't need the <code>.wgsl</code> file at runtime. The downside is that you have
+to rebuild to see shader changes (hot reload is a nice later project).</p>
+
+<p><strong>Chained structs.</strong> wgpu's C API extends descriptors with linked lists of extension structs,
+because one <code>ShaderModuleDescriptor</code> can describe WGSL or SPIR-V sources. You build the source
+struct, then point the descriptor's <code>nextInChain</code> at it:</p>
+
+<pre><code>ShaderModuleDescriptor { label, nextInChain ─┐ }
+                                             ▼
+                      ShaderSourceWGSL { chain = { sType = .ShaderSourceWGSL }, code }</code></pre>
+
+<p>In Odin's bindings, <code>ShaderSourceWGSL</code> has <code>using chain: ChainedStruct</code>. You set
+<code>sType = .ShaderSourceWGSL</code> and pass <code>&amp;your_wgsl_struct.chain</code> as <code>nextInChain</code>.</p>
+
+<p><code>StringView</code> in these bindings is just an Odin <code>string</code>, so labels and code are plain strings.</p>
+
+<h3>Your task</h3>
+<p>Write a proc, e.g. <code>create_shader_module :: proc(device: wgpu.Device, label, source: string) -&gt; wgpu.ShaderModule</code>,
+that builds the WGSL source struct and descriptor and calls <code>wgpu.DeviceCreateShaderModule</code>.</p>
+
+<p>Things to look up in <code>Odin/vendor/wgpu/wgpu.odin</code> (search for the type names):</p>
+<ul>
+  <li><code>ShaderModuleDescriptor</code></li>
+  <li><code>ShaderSourceWGSL</code></li>
+  <li><code>DeviceCreateShaderModule</code></li>
+</ul>
+
+<details>
+<summary>Spoiler</summary>
+<pre><code>create_shader_module :: proc(device: wgpu.Device, label, source: string) -&gt; wgpu.ShaderModule {
+	wgsl := wgpu.ShaderSourceWGSL {
+		sType = .ShaderSourceWGSL,
+		code  = source,
+	}
+	return wgpu.DeviceCreateShaderModule(device, &amp;{label = label, nextInChain = &amp;wgsl.chain})
+}</code></pre>
+<p><code>wgsl</code> lives on the stack, but that's fine: wgpu copies what it needs before
+<code>DeviceCreateShaderModule</code> returns.</p>
+</details>
+
+<div class="checkpoint"><strong>Checkpoint:</strong> <code>odin build .</code> compiles (an unused proc is fine).</div>
+
+<!-- ============================================================ -->
+<h2 id="step3">Step 3: Build the render pipeline</h2>
+
+<h3>Concepts: going through <code>RenderPipelineDescriptor</code> field by field</h3>
+<p>Open <code>RenderPipelineDescriptor</code> in <code>wgpu.odin</code> and follow along.</p>
+
+<p><strong><code>layout</code></strong>: a <code>PipelineLayout</code> describing the bind groups. Pass <code>nil</code> to get an <strong>auto
+layout</strong>, where wgpu infers it from the shader. You have no bindings yet, so <code>nil</code> is perfect.
+You'll build explicit layouts in Stage 3.</p>
+
+<p><strong><code>vertex: VertexState</code></strong></p>
+<ul>
+  <li><code>module</code>: your shader module</li>
+  <li><code>entryPoint</code>: <code>"vs_main"</code></li>
+  <li><code>buffers</code> / <code>bufferCount</code>: vertex buffer layouts. <strong>None yet</strong>, so leave them zero.</li>
+</ul>
+
+<p><strong><code>primitive: PrimitiveState</code></strong></p>
+<ul>
+  <li><code>topology = .TriangleList</code>: every 3 vertices form an independent triangle</li>
+  <li><code>frontFace = .CCW</code>: triangles that appear counter-clockwise on screen count as front-facing</li>
+  <li><code>cullMode = .None</code> for now. In Stage 4 you'll switch to <code>.Back</code> to skip back faces. With your
+    CCW corners the triangle will survive that switch. If your corners were clockwise, it would
+    disappear, which is a classic "where did my mesh go?" bug.</li>
+</ul>
+
+<p><strong><code>multisample: MultisampleState</code></strong></p>
+<ul>
+  <li><code>count = 1</code> (no MSAA), <code>mask = ~u32(0)</code> (all samples enabled)</li>
+</ul>
+
+<p><strong><code>fragment: ^FragmentState</code></strong> (a <strong>pointer</strong>: you can omit it for depth-only passes)</p>
+<ul>
+  <li><code>module</code>, <code>entryPoint = "fs_main"</code></li>
+  <li><code>targets</code>: one <code>ColorTargetState</code> per color attachment in the render pass. Its <code>format</code>
+    <strong>must match the attachment's texture format</strong>, which is <code>gpu.config.format</code> (the surface format).</li>
+  <li><code>blend = nil</code>: no blending, just overwrite. Transparency comes in Stage 14.</li>
+  <li><code>writeMask = wgpu.ColorWriteMaskFlags_All</code></li>
+</ul>
+
+<p><strong><code>depthStencil = nil</code></strong>: no depth buffer until Stage 4.</p>
+
+<div class="callout warn">
+<strong>⚠️ The big Odin + wgpu gotcha: zero values</strong>
+<p>Odin zero-initializes everything, but <strong>zero often means <code>Undefined</code> in webgpu.h, not a
+sensible default</strong>:</p>
+<table>
+  <tr><th>Field</th><th>Zero value</th><th>What happens</th></tr>
+  <tr><td><code>primitive.topology</code></td><td><code>.Undefined</code></td><td>validation error</td></tr>
+  <tr><td><code>multisample.count</code></td><td><code>0</code></td><td>validation error</td></tr>
+  <tr><td><code>multisample.mask</code></td><td><code>0</code></td><td><strong>every sample masked off, nothing draws</strong></td></tr>
+  <tr><td><code>ColorTargetState.writeMask</code></td><td><code>{}</code></td><td><strong>writes no color channels, nothing draws, no error!</strong></td></tr>
+</table>
+<p>The last two are nasty because they fail silently. If you ever see your clear color and no
+triangle, check these first.</p>
+</div>
+
+<h3>Your task</h3>
+<p>Write <code>create_triangle_pipeline :: proc(gpu: ^Gpu_State) -&gt; wgpu.RenderPipeline</code> that:</p>
+<ol>
+  <li>Creates the shader module with <code>#load</code></li>
+  <li>Builds the descriptor and calls <code>wgpu.DeviceCreateRenderPipeline</code></li>
+  <li>Releases the shader module afterwards (<code>wgpu.ShaderModuleRelease</code>). The pipeline keeps
+    what it needs, so <code>defer</code> works nicely here.</li>
+</ol>
+
+<p>For <code>[^]T</code> + count pairs (like <code>targets</code> / <code>targetCount</code>), point at a local variable and set the
+count to 1. Odin lets you take the address of a compound literal inline:
+<code>targets = &amp;wgpu.ColorTargetState{ ... }</code>.</p>
+
+<details>
+<summary>Spoiler</summary>
+<pre><code>TRIANGLE_SHADER :: #load("shaders/triangle.wgsl", string)
+
+create_triangle_pipeline :: proc(gpu: ^Gpu_State) -&gt; wgpu.RenderPipeline {
+	shader := create_shader_module(gpu.device, "triangle shader", TRIANGLE_SHADER)
+	defer wgpu.ShaderModuleRelease(shader)
+
+	return wgpu.DeviceCreateRenderPipeline(
+		gpu.device,
+		&amp;{
+			label = "triangle pipeline",
+			vertex = {module = shader, entryPoint = "vs_main"},
+			primitive = {topology = .TriangleList, frontFace = .CCW, cullMode = .None},
+			multisample = {count = 1, mask = ~u32(0)},
+			fragment = &amp;{
+				module = shader,
+				entryPoint = "fs_main",
+				targetCount = 1,
+				targets = &amp;wgpu.ColorTargetState {
+					format    = gpu.config.format,
+					writeMask = wgpu.ColorWriteMaskFlags_All,
+				},
+			},
+		},
+	)
+}</code></pre>
+</details>
+
+<div class="checkpoint"><strong>Checkpoint:</strong> still compiles.</div>
+
+<!-- ============================================================ -->
+<h2 id="step4">Step 4: Own the pipeline in <code>Gpu_State</code></h2>
+
+<h3>Your task</h3>
+<ol>
+  <li>Add <code>triangle_pipeline: wgpu.RenderPipeline</code> to <code>Gpu_State</code> in <code>wgpu_init.odin</code>.</li>
+  <li>In <code>main</code>, after <code>wgpu_init</code> succeeds, call <code>create_triangle_pipeline(&amp;gpu)</code> and store the result.
+    (It needs <code>gpu.config.format</code>, so it has to come after the surface is configured.)</li>
+  <li>In <code>wgpu_shutdown</code>, release it with <code>wgpu.RenderPipelineRelease</code>. <strong>Order matters:</strong> release
+    it <em>before</em> the device, following the same "children first" pattern as the existing code.</li>
+</ol>
+
+<div class="callout">
+💭 <strong>Design question to think about:</strong> should pipeline creation live inside <code>wgpu_init</code>, or
+stay separate? A common split is that <code>wgpu_init</code> owns "talking to the GPU" (instance,
+device, surface) and a renderer layer owns "what we draw" (pipelines, buffers). You'll have
+many pipelines soon, so it's worth deciding now. Either way is fine for this stage.
+</div>
+
+<div class="checkpoint"><strong>Checkpoint:</strong> run with <code>odin run .</code>. You should see the same clear color with <strong>no errors in
+the terminal</strong>. If the shader or pipeline is invalid, your <code>on_uncaptured_error</code> callback will
+print a validation message here, usually with a line number in the WGSL.</div>
+
+<!-- ============================================================ -->
+<h2 id="step5">Step 5: Draw</h2>
+
+<h3>Concepts</h3>
+<p>Inside a render pass, between <code>BeginRenderPass</code> and <code>RenderPassEncoderEnd</code>:</p>
+
+<pre><code>wgpu.RenderPassEncoderSetPipeline(pass, pipeline)
+wgpu.RenderPassEncoderDraw(pass, vertexCount, instanceCount, firstVertex, firstInstance)</code></pre>
+
+<ul>
+  <li><code>vertexCount = 3</code>: runs <code>vs_main</code> with <code>vertex_index</code> 0, 1 and 2</li>
+  <li><code>instanceCount = 1</code>: <strong>not 0</strong>. Zero instances means nothing draws, and that's another silent failure.</li>
+  <li><code>firstVertex = 0</code>, <code>firstInstance = 0</code></li>
+</ul>
+
+<h3>Your task</h3>
+<p>Add these two calls to <code>render_frame</code> in <code>main.odin</code>, between <code>CommandEncoderBeginRenderPass</code>
+and <code>RenderPassEncoderEnd</code>.</p>
+
+<div class="checkpoint"><strong>Checkpoint:</strong> 🎉 a red/green/blue triangle on your blue-grey background. Resize the window and
+notice that the triangle <strong>stretches</strong>. That's because clip space is always -1..1 whatever the
+aspect ratio. The projection matrix in Stage 3 fixes this.</div>
+
+<div class="callout">
+🎨 <strong>Why does everything look lighter than the numbers say?</strong> Your background <code>{0.1, 0.2, 0.3}</code>
+probably looks like a pale grey-blue, not a dark navy. On macOS <code>caps.formats[0]</code> is usually
+an <strong>sRGB</strong> format (<code>.BGRA8UnormSrgb</code>). wgpu treats your shader output and clear color as
+<em>linear</em> light and gamma-encodes them on write, which brightens dark values. This is the
+<em>correct</em> setup for lighting math later (Stages 12–15), so keep it. Just know that color
+values you pick by eye from a color picker are sRGB and need converting
+(roughly <code>pow(c, 2.2)</code>) to look the same. Try <code>fmt.println(gpu.config.format)</code> to confirm.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="playground">Playground: see it live (WebGPU)</h2>
+
+<p>This page isn't part of the Odin project, but the browser speaks the same WebGPU and WGSL, so the
+shader from Step 1 runs here unchanged. Toggle the switches to see the silent failures from Step 3
+for yourself. <strong>Drag the bottom-right corner of the canvas</strong> to watch the triangle stretch.</p>
+
+<div class="demo">
+  <div class="stage" id="stage"><canvas id="c"></canvas></div>
+  <div class="opts">
+    <label><input type="checkbox" id="o-mask"> <code>writeMask = {}</code></label>
+    <label><input type="checkbox" id="o-inst"> <code>instanceCount = 0</code></label>
+    <label><input type="checkbox" id="o-cw"> clockwise corners</label>
+    <label><input type="checkbox" id="o-cull"> <code>cullMode = .Back</code></label>
+    <label><input type="checkbox" id="o-full"> fullscreen triangle (Exercise 1)</label>
+    <label><input type="checkbox" id="o-check"> pixel checkerboard (Exercise 2)</label>
+  </div>
+  <div id="demo-status"></div>
+  <details>
+    <summary>Shader currently running</summary>
+    <pre><code id="demo-src"></code></pre>
+  </details>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<table>
+  <tr><th>Symptom</th><th>Likely cause</th></tr>
+  <tr><td>Validation error mentioning <code>topology</code> / <code>count</code></td><td>Zero-valued <code>PrimitiveState</code> or <code>MultisampleState</code> fields</td></tr>
+  <tr><td>Error about the color target format</td><td><code>ColorTargetState.format</code> ≠ <code>gpu.config.format</code></td></tr>
+  <tr><td>Clear color shows, no triangle, <strong>no error</strong></td><td><code>writeMask</code> is <code>{}</code>, <code>mask = 0</code>, or <code>instanceCount = 0</code></td></tr>
+  <tr><td>WGSL parse error</td><td>Read the line:column in the message. Missing <code>;</code>, or <code>let</code> used for an array you index dynamically</td></tr>
+  <tr><td><code>#load</code> compile error</td><td>Path is relative to the <code>.odin</code> file, so check the <code>shaders/</code> folder location</td></tr>
+  <tr><td>Triangle disappears once you enable culling later</td><td>Your vertices are clockwise; swap two of them</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="exercises">Exercises (do at least two)</h2>
+
+<ol>
+  <li><strong>Fullscreen triangle.</strong> Change the positions to <code>(-1,-1)</code>, <code>(3,-1)</code>, <code>(-1,3)</code>. One oversized
+    triangle covers the whole screen and the GPU clips the excess. This is <em>the</em> standard trick
+    for post-processing and sky passes, and you'll use it in Stage 15.</li>
+  <li><strong>Pixel-coordinate colors.</strong> In <code>fs_main</code>, <code>in.clip_position.xy</code> holds the <strong>pixel
+    coordinates</strong> of the fragment (the position builtin gets transformed between stages). Make a
+    checkerboard with <code>(floor(x / 32) + floor(y / 32)) % 2</code>.</li>
+  <li><strong>Animate it.</strong> You can't pass time yet without uniforms. Look up what a <code>@group(0)
+    @binding(0) var&lt;uniform&gt;</code> would need. That's the bridge to Stage 3.</li>
+  <li><strong>Draw two triangles</strong> with <code>vertexCount = 6</code> and six entries in each array. Make them share
+    an edge to form a quad. Notice that two vertices are duplicated. That waste is the
+    motivation for index buffers in Stage 2.</li>
+  <li><strong>Break it on purpose.</strong> Set <code>writeMask = {}</code>, then <code>cullMode = .Back</code> with clockwise
+    vertices, then mismatch the target format. Learn what each failure looks like now, so you
+    recognize it later.</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2>Recap: what you should be able to explain</h2>
+<ul class="recap">
+  <li><label><input type="checkbox"> Why wgpu bundles state into an immutable pipeline object</label></li>
+  <li><label><input type="checkbox"> What <code>@builtin(position)</code> and <code>@location(n)</code> mean on vertex outputs vs. fragment outputs</label></li>
+  <li><label><input type="checkbox"> Why values like color get interpolated across the triangle</label></li>
+  <li><label><input type="checkbox"> WebGPU clip-space ranges (and how z differs from OpenGL)</label></li>
+  <li><label><input type="checkbox"> What <code>nextInChain</code> is for</label></li>
+  <li><label><input type="checkbox"> Which zero values in the descriptors silently break rendering</label></li>
+</ul>
+
+<p>Next up: <strong>Stage 2, vertex &amp; index buffers</strong>, where the positions move out of the shader
+and into GPU memory you control from Odin.</p>
+
+</main>
+
+<script>
+(async () => {
+  const $ = id => document.getElementById(id);
+  const status = $("demo-status"), canvas = $("c"), srcEl = $("demo-src");
+  if (!navigator.gpu) { status.textContent = "WebGPU isn't available in this browser, so the live demo is disabled."; return; }
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) { status.textContent = "No WebGPU adapter found."; return; }
+  const device = await adapter.requestDevice();
+  const ctx = canvas.getContext("webgpu");
+  const format = navigator.gpu.getPreferredCanvasFormat();
+  ctx.configure({ device, format, alphaMode: "opaque" });
+
+  const opt = id => $(id).checked;
+
+  function shaderSource() {
+    let pos = opt("o-full")
+      ? ["vec2f(-1.0, -1.0)", "vec2f( 3.0, -1.0)", "vec2f(-1.0,  3.0)"]   // CCW
+      : ["vec2f(-0.5, -0.5)", "vec2f( 0.5, -0.5)", "vec2f( 0.0,  0.5)"];  // CCW
+    if (opt("o-cw")) [pos[1], pos[2]] = [pos[2], pos[1]];                  // swap two corners -> CW
+    const frag = opt("o-check")
+      ? `let c = (floor(in.clip_position.x / 32.0) + floor(in.clip_position.y / 32.0)) % 2.0;
+    return vec4f(in.color * (0.35 + 0.65 * c), 1.0);`
+      : `return vec4f(in.color, 1.0);`;
+    return `struct VertexOutput {
+    @builtin(position) clip_position: vec4f,
+    @location(0) color: vec3f,
+}
+
+@vertex
+fn vs_main(@builtin(vertex_index) idx: u32) -> VertexOutput {
+    var positions = array<vec2f, 3>(
+        ${pos[0]},
+        ${pos[1]},
+        ${pos[2]},
+    );
+    var colors = array<vec3f, 3>(
+        vec3f(1.0, 0.0, 0.0),
+        vec3f(0.0, 1.0, 0.0),
+        vec3f(0.0, 0.0, 1.0),
+    );
+
+    var out: VertexOutput;
+    out.clip_position = vec4f(positions[idx], 0.0, 1.0);
+    out.color = colors[idx];
+    return out;
+}
+
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4f {
+    ${frag}
+}
+`;
+  }
+
+  device.addEventListener("uncapturederror", e => { status.textContent = "Validation error: " + e.error.message; });
+
+  let pipeline = null;
+  function rebuild() {
+    const src = shaderSource();
+    srcEl.textContent = src;
+    const module = device.createShaderModule({ label: "triangle shader", code: src });
+    pipeline = device.createRenderPipeline({
+      label: "triangle pipeline",
+      layout: "auto",
+      vertex: { module, entryPoint: "vs_main" },
+      primitive: { topology: "triangle-list", frontFace: "ccw", cullMode: opt("o-cull") ? "back" : "none" },
+      multisample: { count: 1 },
+      fragment: {
+        module, entryPoint: "fs_main",
+        targets: [{ format, writeMask: opt("o-mask") ? 0 : GPUColorWrite.ALL }],
+      },
+    });
+    const notes = [];
+    if (opt("o-mask") || opt("o-inst")) notes.push("Silent failure: clear color only, and no error reported.");
+    if (opt("o-cull") && opt("o-cw")) notes.push("Clockwise + back-face culling: the triangle is culled.");
+    status.textContent = notes.join(" ");
+    render();
+  }
+
+  function render() {
+    if (!pipeline) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+    const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    const enc = device.createCommandEncoder();
+    const pass = enc.beginRenderPass({
+      colorAttachments: [{
+        view: ctx.getCurrentTexture().createView(),
+        clearValue: { r: 0.1, g: 0.2, b: 0.3, a: 1 },
+        loadOp: "clear", storeOp: "store",
+      }],
+    });
+    pass.setPipeline(pipeline);
+    pass.draw(3, opt("o-inst") ? 0 : 1, 0, 0);
+    pass.end();
+    device.queue.submit([enc.finish()]);
+  }
+
+  document.querySelectorAll(".opts input").forEach(i => i.addEventListener("change", rebuild));
+  new ResizeObserver(render).observe($("stage"));
+  rebuild();
+})();
+</script>
+</body>
+</html>
