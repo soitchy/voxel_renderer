@@ -6,7 +6,7 @@ This project exists to build understanding of wgpu, Odin, voxel renderers, and r
 
 - Odin `dev-2026-03:3da7817f5`, using `vendor:wgpu` (wgpu-native)
 - SDL3 window, WGSL shaders in `shaders/`
-- macOS (Metal backend)
+- Developed on both macOS (Metal backend) and Linux (Vulkan/GL backend). The wgpu-native prebuilt library is per-platform and lives in `vendor/wgpu/lib/` under its release name (e.g. `wgpu-macos-*`, `wgpu-linux-x86_64-release`). Its version must match the `vendor:wgpu` bindings or `CreateInstance` panics, so check this first on version-mismatch errors, and don't assume the platform: check which one you're on before diagnosing.
 
 ## No-code default
 
