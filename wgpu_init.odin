@@ -85,11 +85,11 @@ wgpu_shutdown :: proc(gpu: ^Gpu_State) {
 	if gpu.surface != nil && gpu.device != nil {
 		wgpu.SurfaceUnconfigure(gpu.surface)
 	}
-	if gpu.queue != nil    { wgpu.QueueRelease(gpu.queue) }
-	if gpu.device != nil   { wgpu.DeviceRelease(gpu.device) }
-	if gpu.adapter != nil  { wgpu.AdapterRelease(gpu.adapter) }
-	if gpu.surface != nil  { wgpu.SurfaceRelease(gpu.surface) }
-	if gpu.instance != nil { wgpu.InstanceRelease(gpu.instance) }
+	if gpu.queue != nil {wgpu.QueueRelease(gpu.queue)}
+	if gpu.device != nil {wgpu.DeviceRelease(gpu.device)}
+	if gpu.adapter != nil {wgpu.AdapterRelease(gpu.adapter)}
+	if gpu.surface != nil {wgpu.SurfaceRelease(gpu.surface)}
+	if gpu.instance != nil {wgpu.InstanceRelease(gpu.instance)}
 	gpu^ = {}
 }
 
@@ -161,10 +161,15 @@ request_device :: proc(instance: wgpu.Instance, adapter: wgpu.Adapter) -> (wgpu.
 		userdata1, userdata2: rawptr,
 	) {
 		// Released devices report .Destroyed / .InstanceDropped during shutdown; that's expected.
-		if reason == .Destroyed || reason == .InstanceDropped {
-			return
-		}
+		// if reason == .Destroyed || reason == .InstanceDropped {
+		// 	return
+		// }
+		// @js is the above strictly true?
 		context = runtime.default_context()
+		if reason != nil {
+			// Not at all sure what do if any reason actually shows.
+			fmt.panicf("Oh shit you didn't handle on_device_lost: %v", reason)
+		}
 		fmt.eprintfln("wgpu: device lost (%v): %s", reason, message)
 	}
 
@@ -193,3 +198,4 @@ request_device :: proc(instance: wgpu.Instance, adapter: wgpu.Adapter) -> (wgpu.
 	}
 	return req.device, req.device != nil
 }
+

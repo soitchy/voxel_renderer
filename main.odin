@@ -9,7 +9,13 @@ main :: proc() {
 	}
 	defer sdl3.Quit()
 
-	window := sdl3.CreateWindow("SDL3 Window", 800, 600, {.RESIZABLE, .HIGH_PIXEL_DENSITY, .METAL} when ODIN_OS == .Darwin else {.RESIZABLE, .HIGH_PIXEL_DENSITY})
+	window := sdl3.CreateWindow(
+		"SDL3 Window",
+		800,
+		600,
+		{.RESIZABLE, .HIGH_PIXEL_DENSITY, .METAL} when ODIN_OS ==
+		.Darwin else {.RESIZABLE, .HIGH_PIXEL_DENSITY},
+	)
 	if window == nil {
 		return
 	}
@@ -43,15 +49,19 @@ main :: proc() {
 
 render_frame :: proc(gpu: ^Gpu_State) {
 	surface_texture := wgpu.SurfaceGetCurrentTexture(gpu.surface)
+	// bindings changed since this was last edited hmmm
 	switch surface_texture.status {
 	case .SuccessOptimal, .SuccessSuboptimal:
+	case .Occluded:
+		// Skip the frame. texture is nil in this case.
+		return
 	case .Timeout, .Outdated, .Lost:
 		if surface_texture.texture != nil {
 			wgpu.TextureRelease(surface_texture.texture)
 		}
 		wgpu.SurfaceConfigure(gpu.surface, &gpu.config)
 		return
-	case .OutOfMemory, .DeviceLost, .Error:
+	case .Error:
 		fmt.panicf("wgpu: failed to acquire surface texture: %v", surface_texture.status)
 	}
 	defer wgpu.TextureRelease(surface_texture.texture)
@@ -67,10 +77,10 @@ render_frame :: proc(gpu: ^Gpu_State) {
 		&{
 			colorAttachmentCount = 1,
 			colorAttachments = &wgpu.RenderPassColorAttachment {
-				view       = view,
+				view = view,
 				depthSlice = wgpu.DEPTH_SLICE_UNDEFINED,
-				loadOp     = .Clear,
-				storeOp    = .Store,
+				loadOp = .Clear,
+				storeOp = .Store,
 				clearValue = {0.1, 0.2, 0.3, 1.0},
 			},
 		},
@@ -84,3 +94,4 @@ render_frame :: proc(gpu: ^Gpu_State) {
 	wgpu.QueueSubmit(gpu.queue, {commands})
 	wgpu.SurfacePresent(gpu.surface)
 }
+
